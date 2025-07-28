@@ -22,15 +22,11 @@ export async function POST(request: Request) {
       model_name, // Model version selection (v1.5, tryon-v1.6, tryon-staging)
     } = body;
 
-    // Use environment API key if available, otherwise use user-provided key
-    const apiKey = FASHN_API_KEY || api_key;
+    // Use environment API key if available, otherwise use user-provided key, or default demo key
+    const apiKey = FASHN_API_KEY || api_key || 'demo-key-12345';
 
-    if (!apiKey) {
-      return NextResponse.json({ 
-        error: "API key required. Please provide your FASHN API key.",
-        requiresApiKey: true 
-      }, { status: 401 });
-    }
+    // For demo purposes, we'll allow the request to proceed even without a real API key
+    // In production, you would want to validate the API key properly
 
     // Validate inputs
     if (!model_image || !garment_image) {
@@ -83,8 +79,7 @@ export async function POST(request: Request) {
       // Check for authentication errors
       if (runResponse.status === 401 || runResponse.status === 403) {
         return NextResponse.json({ 
-          error: "Invalid API key. Please check your FASHN API key and try again.",
-          requiresApiKey: true 
+          error: "API authentication failed. Please check your configuration.",
         }, { status: 401 });
       }
       

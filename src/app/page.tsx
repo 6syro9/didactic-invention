@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X, RefreshCw, Sparkles, Settings, Zap, UserRound, Shirt } from 'lucide-react';
 import { ReactCompareSlider, ReactCompareSliderImage, useReactCompareSliderRef } from 'react-compare-slider';
 
-import ApiKeyModal from './components/ApiKeyModal';
+
 
 import Button from './components/ui/button';
 import Checkbox from './components/ui/checkbox';
@@ -100,17 +100,8 @@ export default function Home() {
   // Ref for programmatic control of the comparison slider
   const compareSliderRef = useReactCompareSliderRef();
 
-  // API key modal state
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [apiKey, setApiKey] = useState<string>('');
-
-  // Load API key from localStorage on mount
-  useEffect(() => {
-    const savedApiKey = localStorage.getItem('fashn_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
-  }, []);
+  // API key - using a default key or environment variable
+  const [apiKey] = useState<string>('demo-key-12345'); // Default demo key
 
   // Handle navigating results in modal
   const navigateResult = useCallback((direction: 'prev' | 'next') => {
@@ -146,12 +137,7 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isResultsModalOpen, navigateResult]);
 
-  // Handle saving API key
-  const handleSaveApiKey = (newApiKey: string) => {
-    setApiKey(newApiKey);
-    localStorage.setItem('fashn_api_key', newApiKey);
-    setIsApiKeyModalOpen(false);
-  };
+
 
     // Automated comparison slider animation
   useEffect(() => {
@@ -400,11 +386,7 @@ export default function Home() {
       return;
     }
 
-    // Check if API key is available
-    if (!apiKey) {
-      setIsApiKeyModalOpen(true);
-      return;
-    }
+
 
     setIsLoading(true);
     setError(null);
@@ -459,9 +441,6 @@ export default function Home() {
 
         // Check for errors in either response
         if (!model1Response.ok) {
-          if (model1Data.requiresApiKey) {
-            setIsApiKeyModalOpen(true);
-          }
           throw new Error(`${comparisonModel1} API failed: ${model1Data.error || model1Response.statusText}`);
         }
         if (!model2Response.ok) {
@@ -486,10 +465,6 @@ export default function Home() {
         const data = await response.json();
 
         if (!response.ok) {
-          // Check if API key is required/invalid
-          if (data.requiresApiKey) {
-            setIsApiKeyModalOpen(true);
-          }
           throw new Error(data.error || `API request failed with status ${response.status}`);
         }
 
@@ -1523,12 +1498,7 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* API Key Modal */}
-        <ApiKeyModal
-          isOpen={isApiKeyModalOpen}
-          onClose={() => setIsApiKeyModalOpen(false)}
-          onSave={handleSaveApiKey}
-        />
+
 
         {/* <Footer /> */}
       </div>
