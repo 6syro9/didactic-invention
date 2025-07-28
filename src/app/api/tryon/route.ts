@@ -15,7 +15,6 @@ export async function POST(request: Request) {
       garment_photo_type,
       category,
       mode,
-      segmentation_free,
       seed,
       num_samples,
       api_key, // User-provided API key
@@ -39,7 +38,6 @@ export async function POST(request: Request) {
       garment_photo_type: garment_photo_type.toLowerCase(),
       category,
       mode: mode.toLowerCase(),
-      segmentation_free,
       seed: parseInt(seed, 10),
       num_samples: parseInt(num_samples, 10),
     };

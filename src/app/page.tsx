@@ -3,19 +3,16 @@
 import React, { useState, ChangeEvent, FormEvent, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, RefreshCw, Sparkles, Settings, Zap, UserRound, Shirt } from 'lucide-react';
-import { ReactCompareSlider, ReactCompareSliderImage, useReactCompareSliderRef } from 'react-compare-slider';
+import { X, RefreshCw, Sparkles, Zap, UserRound, Shirt } from 'lucide-react';
 
 
 
 import Button from './components/ui/button';
-import Checkbox from './components/ui/checkbox';
 import { Card, CardHeader, CardTitle, CardContent } from './components/ui/card';
 import FileInput from './components/ui/file-input';
 import RadioGroup from './components/ui/radio-group';
 import Slider from './components/ui/slider';
 import { Dropdown } from './components/ui/dropdown';
-import { cn } from './lib/utils';
 import pica from 'pica';
 
 // Map display names to API values
@@ -57,25 +54,18 @@ export default function Home() {
   const [garmentImageFile, setGarmentImageFile] = useState<File | null>(null);
   const [garmentImagePreview, setGarmentImagePreview] = useState<string | null>(null);
 
-  // API parameter states
-  const [segmentationFree, setSegmentationFree] = useState(true);
+  // Model settings
+  const [modelVersion, setModelVersion] = useState('tryon-v1.6');
   const [garmentPhotoType, setGarmentPhotoType] = useState('Auto');
   const [category, setCategory] = useState('Auto');
   const [mode, setMode] = useState('Balanced');
-  const [seed, setSeed] = useState<number>(() => Math.floor(Math.random() * 1000000));
-  const [numSamples, setNumSamples] = useState<number>(1);
-  const [modelVersion, setModelVersion] = useState('tryon-v1.6');
-  const [comparison, setComparison] = useState(false);
-  const [comparisonModel1, setComparisonModel1] = useState('tryon-v1.5');
-  const [comparisonModel2, setComparisonModel2] = useState('tryon-v1.6');
+  const [seed, setSeed] = useState(42);
+  const [numSamples, setNumSamples] = useState(1);
 
   // Output states
   const [resultGallery, setResultGallery] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Advanced settings toggle
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   
 
 
@@ -87,19 +77,6 @@ export default function Home() {
   const [isResultsModalOpen, setIsResultsModalOpen] = useState(false);
   const [currentResultIndex, setCurrentResultIndex] = useState(0);
   
-  // Comparison modal state
-  const [isComparisonMode, setIsComparisonMode] = useState(false);
-  const [selectedResults, setSelectedResults] = useState<number[]>([]);
-  const [isComparisonModalOpen, setIsComparisonModalOpen] = useState(false);
-  
-  // Animation state for comparison slider
-  const [sliderPosition, setSliderPosition] = useState(50);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [animationDirection, setAnimationDirection] = useState<'right' | 'left'>('right');
-  
-  // Ref for programmatic control of the comparison slider
-  const compareSliderRef = useReactCompareSliderRef();
-
   // API key - using a default key or environment variable
   const [apiKey] = useState<string>('demo-key-12345'); // Default demo key
 
@@ -136,51 +113,6 @@ export default function Home() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isResultsModalOpen, navigateResult]);
-
-
-
-    // Automated comparison slider animation
-  useEffect(() => {
-    let animationActive = true;
-    
-    if (isAnimating && compareSliderRef.current) {
-      const animateSlider = async () => {
-        let step = 0;
-        while (animationActive && isAnimating) {
-          const positions = [85, 25, 50];
-          const directions: ('right' | 'left')[] = ['right', 'left', 'right'];
-          
-          const currentPos = positions[step % positions.length];
-          const currentDir = directions[step % directions.length];
-          
-          if (compareSliderRef.current && animationActive) {
-            compareSliderRef.current.setPosition(currentPos);
-            setSliderPosition(currentPos);
-            setAnimationDirection(currentDir);
-            await new Promise(resolve => setTimeout(resolve, 2500));
-          }
-          
-          step++;
-        }
-      };
-      
-      animateSlider();
-    }
-    
-    return () => {
-      animationActive = false;
-    };
-  }, [isAnimating, compareSliderRef]);
-
-  // Animation control functions
-  const startSliderAnimation = () => setIsAnimating(true);
-  const stopSliderAnimation = () => setIsAnimating(false);
-  const resetSliderPosition = () => {
-    setIsAnimating(false);
-    setSliderPosition(50);
-    setAnimationDirection('right');
-    compareSliderRef.current?.setPosition(50);
-  };
 
   // Touch/swipe handlers for model examples
   const handleModelSwipe = (direction: 'left' | 'right') => {
@@ -229,41 +161,6 @@ export default function Home() {
     setIsResultsModalOpen(true);
   };
 
-  // Handle comparison mode
-  const toggleComparisonMode = () => {
-    setIsComparisonMode(!isComparisonMode);
-    setSelectedResults([]);
-  };
-
-  const handleResultSelection = (index: number) => {
-    if (!isComparisonMode) {
-      openResultsModal(index);
-      return;
-    }
-
-    if (selectedResults.includes(index)) {
-      setSelectedResults(selectedResults.filter(i => i !== index));
-    } else if (selectedResults.length < 2) {
-      const newSelection = [...selectedResults, index];
-      setSelectedResults(newSelection);
-      
-      // Auto-open comparison modal when 2 results are selected
-      if (newSelection.length === 2) {
-        setIsComparisonModalOpen(true);
-      }
-    }
-  };
-
-  const closeComparisonModal = () => {
-    setIsComparisonModalOpen(false);
-    setSelectedResults([]);
-    setIsComparisonMode(false);
-    setIsAnimating(false);
-    setSliderPosition(50);
-    setAnimationDirection('right');
-    compareSliderRef.current?.setPosition(50);
-  };
-
   // Load example images
   const loadExampleImage = async (
     imageUrl: string,
@@ -298,19 +195,12 @@ export default function Home() {
     setGarmentImagePreview(null);
     setResultGallery([]);
     setError(null);
-    setSegmentationFree(true);
     setGarmentPhotoType('Auto');
     setCategory('Auto');
     setMode('Balanced');
-    setSeed(Math.floor(Math.random() * 1000000));
-    setNumSamples(1);
     setModelVersion('tryon-v1.6');
-    setComparison(false);
-    setComparisonModel1('tryon-v1.5');
-    setComparisonModel2('tryon-v1.6');
-    setIsComparisonMode(false);
-    setSelectedResults([]);
-    setIsComparisonModalOpen(false);
+    setSeed(42);
+    setNumSamples(1);
   };
 
   /**
@@ -413,63 +303,27 @@ export default function Home() {
         garment_photo_type: garmentPhotoType.toLowerCase(),
         category: CATEGORY_API_MAPPING[category],
         mode: mode.toLowerCase(),
-        segmentation_free: segmentationFree,
         seed: seed,
         num_samples: numSamples,
         api_key: apiKey,
       };
 
-      if (comparison) {
-        // Run both selected models in parallel for comparison
-        const [model1Response, model2Response] = await Promise.all([
-          fetch('/api/tryon', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...basePayload, model_name: comparisonModel1 }),
-          }),
-          fetch('/api/tryon', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...basePayload, model_name: comparisonModel2 }),
-          })
-        ]);
+      // Single API call
+      const payload = { ...basePayload, model_name: modelVersion };
 
-        const [model1Data, model2Data] = await Promise.all([
-          model1Response.json(),
-          model2Response.json()
-        ]);
+      const response = await fetch('/api/tryon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-        // Check for errors in either response
-        if (!model1Response.ok) {
-          throw new Error(`${comparisonModel1} API failed: ${model1Data.error || model1Response.statusText}`);
-        }
-        if (!model2Response.ok) {
-          throw new Error(`${comparisonModel2} API failed: ${model2Data.error || model2Response.statusText}`);
-        }
+      const data = await response.json();
 
-        // Combine results from both APIs
-        const model1Results = model1Data.output || [];
-        const model2Results = model2Data.output || [];
-        setResultGallery([...model1Results, ...model2Results]);
-
-      } else {
-        // Single API call
-        const payload = { ...basePayload, model_name: modelVersion };
-
-        const response = await fetch('/api/tryon', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || `API request failed with status ${response.status}`);
-        }
-
-        setResultGallery(data.output || []);
+      if (!response.ok) {
+        throw new Error(data.error || `API request failed with status ${response.status}`);
       }
+
+      setResultGallery(data.output || []);
 
     } catch (err: unknown) {
       console.error("Try-on error:", err);
@@ -686,12 +540,6 @@ export default function Home() {
                   )}
                 </AnimatePresence>
                 
-                <Checkbox
-                  checked={segmentationFree}
-                  onChange={(e) => setSegmentationFree(e.target.checked)}
-                  label="Segmentation Free"
-                  description="Let the API handle segmentation automatically"
-                />
               </CardContent>
             </Card>
 
@@ -866,9 +714,9 @@ export default function Home() {
                       label="Photo Type"
                       name="garmentPhotoType"
                       options={[
-                        { label: "Auto", value: "Auto", description: "Let the API determine the photo type" },
-                        { label: "Flat-Lay", value: "Flat-Lay", description: "Garment photographed flat without a model" },
-                        { label: "Model", value: "Model", description: "Garment worn by a model" }
+                        { label: "Auto", value: "Auto" },
+                        { label: "Flat-Lay", value: "Flat-Lay" },
+                        { label: "Model", value: "Model" }
                       ]}
                       value={garmentPhotoType}
                       onChange={setGarmentPhotoType}
@@ -880,10 +728,10 @@ export default function Home() {
                       label="Category"
                       name="category"
                       options={[
-                        { label: "Auto", value: "Auto", description: "Automatically detect garment category" },
-                        { label: "Top", value: "Top", description: "Upper body garments like shirts, tops, etc." },
-                        { label: "Bottom", value: "Bottom", description: "Lower body garments like pants, skirts, etc." },
-                        { label: "Full-body", value: "Full-body", description: "Full-body garments like dresses, jumpsuits, etc." }
+                        { label: "Auto", value: "Auto" },
+                        { label: "Top", value: "Top" },
+                        { label: "Bottom", value: "Bottom" },
+                        { label: "Full-body", value: "Full-body" }
                       ]}
                       value={category}
                       onChange={setCategory}
@@ -897,7 +745,7 @@ export default function Home() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-gray-600" />
+
                   Controls
                 </CardTitle>
               </CardHeader>
@@ -926,9 +774,9 @@ export default function Home() {
                   label="Run Mode"
                   name="mode"
                   options={[
-                    { label: "Performance", value: "Performance", description: "Faster generation with good quality" },
-                    { label: "Balanced", value: "Balanced", description: "Good balance between speed and quality" },
-                    { label: "Quality", value: "Quality", description: "Highest quality but slower generation" }
+                    { label: "Performance", value: "Performance" },
+                    { label: "Balanced", value: "Balanced" },
+                    { label: "Quality", value: "Quality" }
                   ]}
                   value={mode}
                   onChange={setMode}
@@ -936,13 +784,7 @@ export default function Home() {
                   layout="horizontal"
                 />
                 
-                <motion.div
-                  animate={{ height: showAdvancedSettings ? 'auto' : '0px', opacity: showAdvancedSettings ? 1 : 0 }}
-                  className={cn(
-                    "space-y-4 overflow-hidden px-2", 
-                    !showAdvancedSettings && "pointer-events-none"
-                  )}
-                >
+                <div className="space-y-4 px-2">
                   <Slider
                     min={1}
                     max={4}
@@ -982,9 +824,9 @@ export default function Home() {
                     label="Model Version"
                     name="modelVersion"
                     options={[
-                      { label: "v1.6 (Latest)", value: "tryon-v1.6", description: "Recommended production model" },
-                      { label: "v1.5", value: "tryon-v1.5", description: "Original model for backwards compatibility" },
-                      { label: "Staging", value: "tryon-staging", description: "Experimental model, may be slow" }
+                      { label: "v1.6", value: "tryon-v1.6" },
+                      { label: "v1.5", value: "tryon-v1.5" },
+                      { label: "Staging", value: "tryon-staging" }
                     ]}
                     value={modelVersion}
                     onChange={setModelVersion}
@@ -992,62 +834,7 @@ export default function Home() {
                     layout="vertical"
                   />
                   
-                  <Checkbox
-                    checked={comparison}
-                    onChange={(e) => setComparison(e.target.checked)}
-                    label="⚖️ Model Comparison"
-                    description="Run two models in parallel to compare results side by side"
-                  />
-                  
-                  {comparison && (
-                    <div className="space-y-3 mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-600">
-                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Select models to compare:
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                            Model 1
-                          </label>
-                          <select
-                            value={comparisonModel1}
-                            onChange={(e) => setComparisonModel1(e.target.value)}
-                            className="w-full px-2 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-gray-500"
-                          >
-                            <option value="tryon-v1.5">v1.5 (Stable)</option>
-                            <option value="tryon-v1.6">v1.6 (Latest)</option>
-                            <option value="tryon-staging">Staging</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                            Model 2
-                          </label>
-                          <select
-                            value={comparisonModel2}
-                            onChange={(e) => setComparisonModel2(e.target.value)}
-                            className="w-full px-2 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-gray-500"
-                          >
-                            <option value="tryon-v1.5">v1.5</option>
-                            <option value="tryon-v1.6">v1.6 (Latest)</option>
-                            <option value="tryon-staging">Staging</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                </motion.div>
-                
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                  className="w-full text-sm flex justify-center items-center gap-1"
-                >
-                  <Settings className="h-4 w-4" />
-                  {showAdvancedSettings ? 'Hide' : 'Show'} Advanced Settings
-                </Button>
+                </div>
                 
                 {error && (
                   <motion.div 
@@ -1084,33 +871,6 @@ export default function Home() {
                       <Sparkles className="h-5 w-5 text-gray-600" />
                       Try-On Results
                     </div>
-                    {resultGallery.length > 1 && !isLoading && (
-                      <div className="flex items-center gap-2">
-                        {isComparisonMode && (
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            Select 2 results to compare ({selectedResults.length}/2)
-                          </span>
-                        )}
-                        <Button
-                          variant={isComparisonMode ? "primary" : "outline"}
-                          size="sm"
-                          onClick={toggleComparisonMode}
-                          className="flex items-center gap-1"
-                        >
-                          {isComparisonMode ? (
-                            <>
-                              <X className="h-4 w-4" />
-                              Cancel
-                            </>
-                          ) : (
-                            <>
-                              ⚖️
-                              Compare
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1139,80 +899,47 @@ export default function Home() {
                         exit={{ opacity: 0 }}
                         className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
                       >
-                        {resultGallery.map((url, index) => {
-                          const isSelected = selectedResults.includes(index);
-                          const canSelect = isComparisonMode && (selectedResults.length < 2 || isSelected);
-                          
-                          return (
-                            <motion.div 
-                              key={index}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ 
-                                opacity: 1, 
-                                scale: 1,
-                                transition: { delay: index * 0.05, duration: 0.2 }
-                              }}
-                              className={cn(
-                                "relative group cursor-pointer",
-                                isSelected && "ring-2 ring-blue-500 ring-offset-2",
-                                isComparisonMode && !canSelect && "opacity-50 cursor-not-allowed"
-                              )}
-                              onClick={() => handleResultSelection(index)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  handleResultSelection(index);
-                                }
-                              }}
-                              tabIndex={0}
-                              role="button"
-                              aria-label={isComparisonMode ? `${isSelected ? 'Deselect' : 'Select'} result ${index + 1} for comparison` : `View result ${index + 1} in full screen`}
-                            >
-                              <div className="aspect-[2/3] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-800">
-                                <Image 
-                                  src={url} 
-                                  alt={`Result ${index + 1}`} 
-                                  className="max-w-full max-h-full object-contain p-2" 
-                                  width={300}
-                                  height={400}
-                                  unoptimized
-                                />
+                        {resultGallery.map((url, index) => (
+                          <motion.div 
+                            key={index}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ 
+                              opacity: 1, 
+                              scale: 1,
+                              transition: { delay: index * 0.05, duration: 0.2 }
+                            }}
+                            className="relative group cursor-pointer"
+                            onClick={() => openResultsModal(index)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                openResultsModal(index);
+                              }
+                            }}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`View result ${index + 1} in full screen`}
+                          >
+                            <div className="aspect-[2/3] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-800">
+                              <Image 
+                                src={url} 
+                                alt={`Result ${index + 1}`} 
+                                className="max-w-full max-h-full object-contain p-2" 
+                                width={300}
+                                height={400}
+                                unoptimized
+                              />
+                            </div>
+                            
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="bg-black/70 text-white py-2 px-4 rounded-full text-sm flex items-center gap-2">
+                                <Zap className="h-4 w-4" />
+                                Click to view full size
                               </div>
-                              
-                              {/* Selection indicator */}
-                              {isComparisonMode && (
-                                <div className="absolute top-2 left-2 z-10">
-                                  <div className={cn(
-                                    "w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold",
-                                    isSelected ? "bg-blue-500 border-blue-500 text-white" : "bg-white/90 border-gray-400 text-gray-600"
-                                  )}>
-                                    {isSelected ? selectedResults.indexOf(index) + 1 : ""}
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {/* Hover overlay */}
-                              {!isComparisonMode && (
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <div className="bg-black/70 text-white py-2 px-4 rounded-full text-sm flex items-center gap-2">
-                                    <Zap className="h-4 w-4" />
-                                    Click to view full size
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {/* Comparison mode overlay */}
-                              {isComparisonMode && canSelect && (
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <div className="bg-blue-500/90 text-white py-2 px-4 rounded-full text-sm flex items-center gap-2">
-                                    ⚖️
-                                    {isSelected ? 'Deselect' : 'Select for comparison'}
-                                  </div>
-                                </div>
-                              )}
-                            </motion.div>
-                          );
-                        })}
+                            </div>
+                          </motion.div>
+                        ))}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -1358,144 +1085,7 @@ export default function Home() {
 
         {/* Comparison Modal */}
         <AnimatePresence>
-          {isComparisonModalOpen && selectedResults.length === 2 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="fixed inset-0 w-screen h-screen bg-black/95 backdrop-blur-sm z-50 flex items-center justify-center"
-              style={{ 
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: '100vw',
-                height: '100vh'
-              }}
-              onClick={closeComparisonModal}
-            >
-              <div className="relative w-full h-full flex items-center justify-center">
-                {/* Close button */}
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={closeComparisonModal}
-                  className="absolute top-4 right-4 z-10 bg-black/70 hover:bg-black/90 text-white rounded-full p-3 backdrop-blur-sm transition-colors cursor-pointer"
-                >
-                  <X className="h-6 w-6" />
-                </motion.button>
-
-                {/* Title and Status Info */}
-                <div className="absolute top-4 left-4 z-10 bg-black/70 text-white px-4 py-2 rounded-full text-sm backdrop-blur-sm">
-                  <div className="flex items-center gap-3">
-                    <span>⚖️ Compare Results</span>
-                    <span className="text-xs opacity-75">• Drag to reveal or use auto</span>
-                    {isAnimating && (
-                      <div className="text-xs opacity-75 flex items-center gap-1">
-                        <span>Moving:</span>
-                        <motion.span
-                          animate={{ opacity: [0.5, 1, 0.5] }}
-                          transition={{ duration: 1, repeat: Infinity }}
-                        >
-                          {animationDirection === 'right' ? '→' : '←'}
-                        </motion.span>
-                        <span className="text-yellow-300">
-                          {Math.round(sliderPosition)}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Animation Control Buttons */}
-                <div 
-                  className="absolute bottom-4 left-4 z-10 bg-black/70 text-white px-4 py-2 rounded-full text-sm backdrop-blur-sm"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isAnimating) {
-                          stopSliderAnimation();
-                        } else {
-                          startSliderAnimation();
-                        }
-                      }}
-                      className={`px-3 py-1 rounded text-xs transition-colors cursor-pointer ${
-                        isAnimating 
-                          ? 'bg-red-500/80 hover:bg-red-500' 
-                          : 'bg-green-500/80 hover:bg-green-500'
-                      }`}
-                    >
-                      {isAnimating ? '⏸️ Pause Auto' : '▶️ Start Auto'}
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        resetSliderPosition();
-                      }}
-                      className="px-3 py-1 bg-blue-500/80 hover:bg-blue-500 rounded text-xs transition-colors cursor-pointer"
-                    >
-                      🔄 Center
-                    </motion.button>
-                  </div>
-                </div>
-
-                                 {/* Comparison container */}
-                 <motion.div
-                   initial={{ opacity: 0, scale: 0.95 }}
-                   animate={{ opacity: 1, scale: 1 }}
-                   exit={{ opacity: 0, scale: 0.95 }}
-                   transition={{ duration: 0.15, ease: "easeOut" }}
-                   className="relative w-full h-full flex items-center justify-center p-4"
-                   onClick={(e) => e.stopPropagation()}
-                 >
-                   <div className="relative w-full max-w-2xl aspect-[2/3] overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
-                     <ReactCompareSlider
-                       ref={compareSliderRef}
-                       itemOne={
-                         <ReactCompareSliderImage 
-                           src={resultGallery[selectedResults[0]]} 
-                           alt={`${comparisonModel1} result`}
-                         />
-                       }
-                       itemTwo={
-                         <ReactCompareSliderImage 
-                           src={resultGallery[selectedResults[1]]} 
-                           alt={`${comparisonModel2} result`}
-                         />
-                       }
-                       position={sliderPosition}
-                       onPositionChange={(position: number) => {
-                         if (!isAnimating) {
-                           setSliderPosition(position);
-                         }
-                       }}
-                       changePositionOnHover={false}
-                       disabled={isAnimating}
-                       transition="1.5s ease-in-out"
-                       style={{ width: '100%', height: '100%' }}
-                     />
-                     
-                     {/* Model Labels */}
-                     <div className="absolute top-1/2 left-3 -translate-y-1/2 z-20 bg-black/80 text-white px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm">
-                       {comparisonModel1.replace('tryon-', '')}
-                     </div>
-                     <div className="absolute top-1/2 right-3 -translate-y-1/2 z-20 bg-black/80 text-white px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm">
-                       {comparisonModel2.replace('tryon-', '')}
-                     </div>
-                   </div>
-                 </motion.div>
-              </div>
-            </motion.div>
-          )}
+          {/* Removed comparison modal as it's no longer used */}
         </AnimatePresence>
 
 

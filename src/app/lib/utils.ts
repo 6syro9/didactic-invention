@@ -23,7 +23,7 @@ export const FADE_IN_ANIMATION_CARD_VARIANTS = {
     opacity: 1, 
     y: 0, 
     transition: { 
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 300,
       damping: 30
     } 
@@ -36,7 +36,7 @@ export const FADE_UP_ANIMATION_VARIANTS = {
     opacity: 1, 
     y: 0, 
     transition: { 
-      type: 'spring',
+      type: 'spring' as const,
       stiffness: 100,
       damping: 15
     } 
